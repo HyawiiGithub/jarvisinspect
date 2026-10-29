@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J.AR.V.I.S · Code Inspection</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #080b11;
+            --panel: #0e141c;
+            --panel-2: #131c26;
+            --border: #1f2c3a;
+            --text: #dbe7f3;
+            --muted: #6b7f93;
+            --accent: #5eead4;
+            --accent-dim: #2dd4bf33;
+            --error: #ff5c5c;
+            --error-bg: #ff5c5c14;
+            --error-border: #ff5c5c88;
+            --tip: #ffd966;
+            --tip-bg: #ffd9660f;
+            --tip-border: #ffd96688;
+        }
+
+        body {
+            background:
+                radial-gradient(ellipse at 20% 0%, #0d2a2a 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 100%, #1a102a 0%, transparent 50%),
+                var(--bg);
+            font-family: 'Inter', system-ui, sans-serif;
+            padding: 2rem 1.5rem;
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1480px;
+            margin: 0 auto;
+        }
+
+        /* ── Header ─────────────────────────────────── */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 1.2rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.6rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .brand h1 {
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: linear-gradient(120deg, #5eead4, #38bdf8 50%, #a78bfa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            line-height: 1.1;
+        }
+
+        .brand .meta {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+            margin-top: 0.5rem;
+            font-size: 0.88rem;
+            color: var(--muted);
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            background: var(--accent-dim);
+            border: 1px solid #2dd4bf55;
+            color: var(--accent);
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.3rem 0.8rem;
+            border-radius: 100px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .developer {
+            background: linear-gradient(135deg, #1a2332, #0e141c);
+            border: 1px solid #2dd4bf44;
+            border-radius: 1rem;
+            padding: 0.75rem 1.4rem;
+            text-align: right;
+            box-shadow: 0 0 30px #2dd4bf11;
+        }
+
+        .developer .label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        .developer .name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: -0.01em;
+        }
+
+        /* ── Stats bar ──────────────────────────────── */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1rem 1.2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            border-radius: 3px 3px 0 0;
+        }
+
+        .stat.errors::before { background: var(--error); }
+        .stat.tips::before { background: var(--tip); }
+        .stat.total::before { background: var(--accent); }
+
+        .stat .num {
+            font-size: 1.9rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+        }
+
+        .stat.errors .num { color: var(--error); }
+        .stat.tips .num { color: var(--tip); }
+        .stat.total .num { color: var(--accent); }
+
+        .stat .lbl {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted);
+            font-weight: 600;
+            margin-top: 0.2rem;
+        }
+
+        /* ── Two-panel layout ───────────────────────── */
+        .layout {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .layout { grid-template-columns: 1fr; }
+        }
+
+        /* ── Findings panel ─────────────────────────── */
+        .findings {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+            position: sticky;
+            top: 1rem;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 1.2rem;
+            overflow: hidden;
+        }
+
+        .panel-head {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 1rem 1.2rem;
+            font-weight: 700;
+            font-size: 0.95rem;
+            letter-spacing: 0.01em;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-head .dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .panel-head.errors .dot { background: var(--error); box-shadow: 0 0 10px var(--error); }
+        .panel-head.tips .dot { background: var(--tip); box-shadow: 0 0 10px var(--tip); }
+
+        .panel-head .count {
+            margin-left: auto;
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 0.15rem 0.6rem;
+            border-radius: 100px;
+        }
+
+        .panel-head.errors .count { background: var(--error-bg); color: var(--error); }
+        .panel-head.tips .count { background: var(--tip-bg); color: var(--tip); }
+
+        .finding-list {
+            list-style: none;
+            padding: 0.6rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            max-height: 420px;
+            overflow-y: auto;
+        }
+
+        .finding-list::-webkit-scrollbar { width: 6px; }
+        .finding-list::-webkit-scrollbar-track { background: transparent; }
+        .finding-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+        .finding {
+            display: flex;
+            gap: 0.7rem;
+            padding: 0.65rem 0.8rem;
+            border-radius: 0.7rem;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            border-left: 3px solid transparent;
+            align-items: flex-start;
+        }
+
+        .finding:hover {
+            background: var(--panel-2);
+            transform: translateX(2px);
+        }
+
+        .finding.error { border-left-color: var(--error); background: var(--error-bg); }
+        .finding.tip { border-left-color: var(--tip); background: var(--tip-bg); }
+
+        .finding .ln {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--muted);
+            flex-shrink: 0;
+            padding-top: 0.15rem;
+            min-width: 2.4rem;
+        }
+
+        .finding .desc {
+            font-size: 0.82rem;
+            line-height: 1.45;
+            color: var(--text);
+        }
+
+        .finding.error .desc { color: #ffb3b3; }
+        .finding.tip .desc { color: #ffe9a8; }
+
+        /* ── Code panel ─────────────────────────────── */
+        .code-panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 1.2rem;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            max-height: 85vh;
+        }
+
+        .code-head {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.9rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            background: var(--panel-2);
+        }
+
+        .code-head .traffic {
+            display: flex;
+            gap: 0.45rem;
+        }
+
+        .code-head .traffic span {
+            width: 11px; height: 11px;
+            border-radius: 50%;
+        }
+
+        .code-head .traffic .r { background: #ff5f57; }
+        .code-head .traffic .y { background: #febc2e; }
+        .code-head .traffic .g { background: #28c840; }
+
+        .code-head .filename {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-left: 0.5rem;
+        }
+
+        .code-head .legend-inline {
+            margin-left: auto;
+            display: flex;
+            gap: 1rem;
+            font-size: 0.72rem;
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        .legend-inline .li { display: flex; align-items: center; gap: 0.35rem; }
+        .legend-inline .li .sw { width: 9px; height: 9px; border-radius: 2px; }
+        .legend-inline .li .sw.e { background: var(--error); }
+        .legend-inline .li .sw.t { background: var(--tip); }
+
+        .code-scroll {
+            overflow: auto;
+            flex: 1;
+        }
+
+        .code-scroll::-webkit-scrollbar { width: 11px; height: 11px; }
+        .code-scroll::-webkit-scrollbar-track { background: var(--bg); }
+        .code-scroll::-webkit-scrollbar-thumb { background: #253241; border-radius: 10px; border: 2px solid var(--bg); }
+        .code-scroll::-webkit-scrollbar-thumb:hover { background: #33475c; }
+
+        pre {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.82rem;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0.5rem 0;
+        }
+
+        .line {
+            display: flex;
+            border-left: 3px solid transparent;
+            transition: background 0.12s;
+        }
+
+        .line:hover { background: #ffffff05; }
+
+        .line.error {
+            background: var(--error-bg);
+            border-left-color: var(--error);
+        }
+
+        .line.tip {
+            background: var(--tip-bg);
+            border-left-color: var(--tip);
+        }
+
+        .line.highlight {
+            background: #5eead422 !important;
+            border-left-color: var(--accent) !important;
+            animation: pulse 1.2s ease;
+        }
+
+        @keyframes pulse {
+            0%, 100% { background: #5eead422; }
+            50% { background: #5eead444; }
+        }
+
+        .line-num {
+            display: inline-block;
+            width: 3.4rem;
+            text-align: right;
+            padding-right: 1rem;
+            color: #3f5468;
+            user-select: none;
+            flex-shrink: 0;
+            font-size: 0.75rem;
+        }
+
+        .line.error .line-num { color: var(--error); font-weight: 600; }
+        .line.tip .line-num { color: var(--tip); font-weight: 600; }
+
+        .line-code {
+            flex: 1;
+            white-space: pre-wrap;
+            word-break: break-word;
+            padding-right: 1.5rem;
+        }
+
+        .tag {
+            display: inline-block;
+            font-size: 0.62rem;
+            font-weight: 700;
+            padding: 0.1rem 0.5rem;
+            border-radius: 100px;
+            margin-left: 0.7rem;
+            letter-spacing: 0.5px;
+            vertical-align: middle;
+            text-transform: uppercase;
+            position: relative;
+            top: -1px;
+        }
+
+        .tag.err { background: var(--error); color: #1a0808; }
+        .tag.tip { background: var(--tip); color: #1a1408; }
+
+        .inline-note {
+            font-size: 0.74rem;
+            font-style: italic;
+            margin-left: 0.7rem;
+            opacity: 0.85;
+        }
+
+        .line.error .inline-note { color: #ffb3b3; }
+        .line.tip .inline-note { color: #ffe9a8; }
+
+        /* ── Footer ─────────────────────────────────── */
+        .footer {
+            margin-top: 1.5rem;
+            padding-top: 1.2rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.78rem;
+            color: var(--muted);
+            flex-wrap: wrap;
+            gap: 0.6rem;
+        }
+
+        .footer .sig {
+            color: var(--accent);
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Header -->
+        <header class="header">
+            <div class="brand">
+                <h1>J.AR.V.I.S · Code Inspection</h1>
+                <div class="meta">
+                    <span class="badge">Static Analysis</span>
+                    <span>Python · discord.py · SQLite</span>
+                </div>
+            </div>
+            <div class="developer">
+                <div class="label">Developed By</div>
+                <div class="name">Hyawii</div>
+            </div>
+        </header>
+
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat total">
+                <div class="num" id="statTotal">0</div>
+                <div class="lbl">Total Lines</div>
+            </div>
+            <div class="stat errors">
+                <div class="num" id="statErrors">0</div>
+                <div class="lbl">Errors Found</div>
+            </div>
+            <div class="stat tips">
+                <div class="num" id="statTips">0</div>
+                <div class="lbl">Tips &amp; Improvements</div>
+            </div>
+        </div>
+
+        <!-- Two-panel layout -->
+        <div class="layout">
+
+            <!-- Left: findings lists -->
+            <aside class="findings">
+
+                <div class="panel">
+                    <div class="panel-head errors">
+                        <span class="dot"></span>
+                        Errors / Bugs
+                        <span class="count" id="errCount">0</span>
+                    </div>
+                    <ul class="finding-list" id="errorList"></ul>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-head tips">
+                        <span class="dot"></span>
+                        Tips / Improvements
+                        <span class="count" id="tipCount">0</span>
+                    </div>
+                    <ul class="finding-list" id="tipList"></ul>
+                </div>
+
+            </aside>
+
+            <!-- Right: code viewer -->
+            <main class="code-panel">
+                <div class="code-head">
+                    <div class="traffic">
+                        <span class="r"></span><span class="y"></span><span class="g"></span>
+                    </div>
+                    <span class="filename">bot.py</span>
+                    <div class="legend-inline">
+                        <span class="li"><span class="sw e"></span> error</span>
+                        <span class="li"><span class="sw t"></span> tip</span>
+                    </div>
+                </div>
+                <div class="code-scroll" id="codeScroll">
+                    <pre id="codeContainer"></pre>
+                </div>
+            </main>
+
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <span>Inspection complete · <span id="footerSummary"></span></span>
+            <span class="sig">J.AR.V.I.S v2.4 · static analysis engine</span>
+        </footer>
+
+    </div>
+
+    <script>
+        /* ────────────────────────────────────────────────
+           FULL CODE WITH LINE-BY-LINE ANNOTATIONS
+        ──────────────────────────────────────────────── */
+        const codeLines = [
+            { text: '### message lro7i, matgl3ch les commentaire bach matnsach kol command w cha ydir' },
+            { text: '' },
+            { text: 'import discord' },
+            { text: 'import random' },
+            { text: 'import sqlite3' },
+            { text: 'import os' },
+            { text: 'from discord import app_commands' },
+            { text: 'from discord.ext import commands as cdm' },
+            { text: '' },
+            { text: 'intents = discord.Intents.all()' },
+            { text: 'token = os.getenv("TOKEN")', type: 'tip', note: 'No validation if token is None → cryptic crash at bot.run' },
+            { text: '' },
+            { text: 'bot = cdm.Bot(command_prefix=">", intents=intents)' },
+            { text: '' },
+            { text: '# region DATABASE' },
+            { text: 'conn = sqlite3.connect("economy.db")' },
+            { text: 'cursor = conn.cursor()' },
+            { text: '' },
+            { text: 'cursor.execute("""' },
+            { text: 'CREATE TABLE IF NOT EXISTS users (' },
+            { text: '    user_id INTEGER PRIMARY KEY,' },
+            { text: '    coins INTEGER' },
+            { text: ')' },
+            { text: '""")' },
+            { text: '' },
+            { text: '# BALLS DATABASE' },
+            { text: '' },
+            { text: 'cursor.execute("""' },
+            { text: 'CREATE TABLE IF NOT EXISTS guild_settings (' },
+            { text: '    guild_id INTEGER PRIMARY KEY,' },
+            { text: '    channel_id INTEGER' },
+            { text: ')' },
+            { text: '""")' },
+            { text: '' },
+            { text: 'cursor.execute("""' },
+            { text: 'CREATE TABLE IF NOT EXISTS collections (' },
+            { text: '    user_id INTEGER,' },
+            { text: '    ball_name TEXT,' },
+            { text: '    PRIMARY KEY (user_id, ball_name)' },
+            { text: ')' },
+            { text: '""")' },
+            { text: '' },
+            { text: '#money and tax database' },
+            { text: 'cursor.execute("""' },
+            { text: 'CREATE TABLE IF NOT EXISTS guild_economy (' },
+            { text: '    guild_id INTEGER PRIMARY KEY,' },
+            { text: '    treasury INTEGER DEFAULT 0,' },
+            { text: '    tax_rate REAL DEFAULT 0' },
+            { text: ')' },
+            { text: '""")' },
+            { text: '' },
+            { text: '# Ensure warning_limits table exists at startup' },
+            { text: 'cursor.execute("""' },
+            { text: 'CREATE TABLE IF NOT EXISTS warning_limits (' },
+            { text: '    guild_id INTEGER PRIMARY KEY,' },
+            { text: '    term_limit INTEGER' },
+            { text: ')' },
+            { text: '""")' },
+            { text: '' },
+            { text: 'conn.commit()' },
+            { text: '# warnings table (for moderation)' },
+            { text: 'cursor.execute("""' },
+            { text: 'CREATE TABLE IF NOT EXISTS warnings (' },
+            { text: '    id INTEGER PRIMARY KEY AUTOINCREMENT,' },
+            { text: '    user_id INTEGER,' },
+            { text: '    guild_id INTEGER,' },
+            { text: '    reason TEXT' },
+            { text: ')' },
+            { text: '""")' },
+            { text: 'conn.commit()' },
+            { text: '#endregion' },
+            { text: '' },
+            { text: '#region vote view' },
+            { text: 'class VoteView(discord.ui.View):' },
+            { text: '    def __init__(self, question, author):' },
+            { text: '        super().__init__(timeout=300)  # vote duration' },
+            { text: '        self.question = question' },
+            { text: '        self.author = author' },
+            { text: '' },
+            { text: '        self.aye = 0' },
+            { text: '        self.nay = 0' },
+            { text: '        self.abstain = 0' },
+            { text: '' },
+            { text: '        self.voters = set()' },
+            { text: '' },
+            { text: '    def get_embed(self):' },
+            { text: '        embed = discord.Embed(' },
+            { text: '            title="🗳️ Vote",' },
+            { text: '            description=self.question,' },
+            { text: '            color=discord.Color.blurple()' },
+            { text: '        )' },
+            { text: '' },
+            { text: '        embed.add_field(name="🟢 Aye", value=str(self.aye))' },
+            { text: '        embed.add_field(name="🔴 Nay", value=str(self.nay))' },
+            { text: '        embed.add_field(name="⚪ Abstain", value=str(self.abstain))' },
+            { text: '' },
+            { text: '        embed.set_footer(text=f"Started by {self.author}")' },
+            { text: '        return embed' },
+            { text: '' },
+            { text: '    async def update_message(self, interaction):' },
+            { text: '        await interaction.message.edit(embed=self.get_embed(), view=self)' },
+            { text: '' },
+            { text: '    #buttonss' },
+            { text: '' },
+            { text: '    @discord.ui.button(label="Aye", style=discord.ButtonStyle.green)' },
+            { text: '    async def aye_button(self, interaction: discord.Interaction, _button: discord.ui.Button):' },
+            { text: '        if interaction.user.id in self.voters:' },
+            { text: '            await interaction.response.send_message("You already voted!", ephemeral=True)' },
+            { text: '            return' },
+            { text: '' },
+            { text: '        self.voters.add(interaction.user.id)' },
+            { text: '        self.aye += 1' },
+            { text: '' },
+            { text: '        await interaction.response.defer()' },
+            { text: '        await self.update_message(interaction)' },
+            { text: '' },
+            { text: '    @discord.ui.button(label="Nay", style=discord.ButtonStyle.red)' },
+            { text: '    async def nay_button(self, interaction: discord.Interaction, _button: discord.ui.Button):' },
+            { text: '        if interaction.user.id in self.voters:' },
+            { text: '            await interaction.response.send_message("You already voted!", ephemeral=True)' },
+            { text: '            return' },
+            { text: '' },
+            { text: '        self.voters.add(interaction.user.id)' },
+            { text: '        self.nay += 1' },
+            { text: '' },
+            { text: '        await interaction.response.defer()' },
+            { text: '        await self.update_message(interaction)' },
+            { text: '' },
+            { text: '    @discord.ui.button(label="Abstain", style=discord.ButtonStyle.gray)' },
+            { text: '    async def abstain_button(self, interaction: discord.Interaction, _button: discord.ui.Button):' },
+            { text: '        if interaction.user.id in self.voters:' },
+            { text: '            await interaction.response.send_message("You already voted!", ephemeral=True)' },
+            { text: '            return' },
+            { text: '' },
+            { text: '        self.voters.add(interaction.user.id)' },
+            { text: '        self.abstain += 1' },
+            { text: '' },
+            { text: '        await interaction.response.defer()' },
+            { text: '        await self.update_message(interaction)' },
+            { text: '' },
+            { text: '    async def on_timeout(self):' },
+            { text: '        for item in self.children:' },
+            { text: '            item.disabled = True' },
+            { text: '' },
+            { text: '        result = "PASSED ✅" if self.aye > self.nay else "REJECTED ❌"' },
+            { text: '' },
+            { text: '        embed = self.get_embed()' },
+            { text: '        embed.add_field(name="Result", value=result, inline=False)' },
+            { text: '' },
+            { text: '        self.message = getattr(self, "message", None)' },
+            { text: '        if self.message:' },
+            { text: '            await self.message.edit(embed=embed, view=self)' },
+            { text: '#endregion' },
+            { text: '' },
+            { text: '#region like button (for twitter command color is red and it adds a like count to the embed)' },
+            { text: 'class LikeButton(discord.ui.Button):', type: 'tip', note: 'Likes reset on bot restart — stateful per instance' },
+            { text: '    def __init__(self):' },
+            { text: '        super().__init__(label="Like", style=discord.ButtonStyle.red)' },
+            { text: '        self.likes = 0' },
+            { text: '' },
+            { text: '    async def callback(self, interaction: discord.Interaction):' },
+            { text: '        self.likes += 1' },
+            { text: '        self.label = f"Like ({self.likes})"' },
+            { text: '        await interaction.response.edit_message(view=self.view)' },
+            { text: '#endregion' },
+            { text: '' },
+            { text: '#region punches' },
+            { text: 'punches = [' },
+            { text: '    "https://media1.tenor.com/m/54vXJe6Jj3kAAAAd/spy-family-spy-x-family.gif",' },
+            { text: '    "https://media1.tenor.com/m/b0ZXAm867pYAAAAd/jujutsu-kaisen-season-3.gif",' },
+            { text: '    "https://media1.tenor.com/m/ markiplier-gif-25538262",', type: 'tip', note: 'URL contains a space — likely a broken/invalid link' },
+            { text: '    "https://media1.tenor.com/m/terminator-gut-punch-gif-10746852"' },
+            { text: ']' },
+            { text: '#endregion' },
+            { text: '' },
+            { text: '#region balls' },
+            { text: 'balls = {' },
+            { text: '    "the authority":"https://cdn.discordapp.com/attachments/1428200557964824586/1428206923102031965/Flag_of_The_Authority.svg.png?ex=69cfcd99&is=69ce7c19&hm=ff01b0fde493bd412f244e2da89fc4017010bf64fb39fdd8cd4e845a5a5d47b8&",' },
+            { text: '    "Algeria": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Flag_of_Algeria.svg/800px-Flag_of_Algeria.png",' },
+            { text: '    "France": "https://upload.wikimedia.org/wikipedia/en/thumb/c/c3/Flag_of_France.svg/800px-Flag_of_France.png",' },
+            { text: '    "Germany": "https://upload.wikimedia.org/wikipedia/en/thumb/b/ba/Flag_of_Germany.svg/800px-Flag_of_Germany.png",' },
+            { text: '    "RBS":"https://cdn.discordapp.com/attachments/1203785283112276078/1489270094801404078/0007d35a805f67afa28576247f542864.png?ex=69cfce5b&is=69ce7cdb&hm=bbb8c942535eadff3d90fe702a390c5feab4a21bfbb139ca358a4addc1379adb&",' },
+            { text: '    "parthenope":"https://cdn.discordapp.com/attachments/1203785283112276078/1489276829297807533/Senza_titolo_1062_20260216002948.png?ex=69cfd4a1&is=69ce8321&hm=78eeeb9ff537a5703f7a0337c0edd77457fc1735a4bf3ef6ecdeedb93ff1123c&",' },
+            { text: '    "OMSK":"https://cdn.discordapp.com/attachments/1203785283112276078/1489276650213347349/Balls.png?ex=69cfd476&is=69ce82f6&hm=bd0806cb745e2cc665547670aadbc5fd89650f6cb93a78b8d72c2a30c3d80bf5&",' },
+            { text: '    "malaysia":"https://cdn.discordapp.com/attachments/1489273816827039804/1489276568885919865/WhatsApp_Image_2026-02-18_at_20.54.06.jpeg?ex=69cfd463&is=69ce82e3&hm=21467ff7f64e82feb3a660448698682c1fa0c35d2ae3a367fdcd60f87412095a&",' },
+            { text: '    "christmass Authority":"https://cdn.discordapp.com/attachments/1203785283112276078/1489270200783208479/The_Authority.png?ex=69cfce75&is=69ce7cf5&hm=4d5fb1860d654adce9b503848d5b90ec250508b612a7e95150e6977e28051d30&"' },
+            { text: '}' },
+            { text: '#endregion' },
+            { text: '' },
+            { text: 'def roulette_number():' },
+            { text: '    return random.randint(0, 36)' },
+            { text: '' },
+            { text: 'def roulette_color():' },
+            { text: '    col = random.choice(["red", "black"])' },
+            { text: '    return col' },
+            { text: '' },
+            { text: '' },
+            { text: '#================================================================================================================================' },
+            { text: '' },
+            { text: '@bot.event' },
+            { text: 'async def on_ready():' },
+            { text: '    print("online")' },
+            { text: '    try:' },
+            { text: '        synced = await bot.tree.sync()' },
+            { text: '        print(f"Synced {len(synced)} command(s)")' },
+            { text: '        print([cmd.name for cmd in bot.tree.get_commands()])' },
+            { text: '    except Exception as e:' },
+            { text: '        print(e)' },
+            { text: '' },
+            { text: '' },
+            { text: '' },
+            { text: '#info command' },
+            { text: '@bot.tree.command(name="info", description="information about the bot")' },
+            { text: 'async def info(interaction: discord.Interaction):' },
+            { text: '    await interaction.response.send_message(' },
+            { text: '        "this bot was made by Midou, it is still in development, it aims to be a standard mock government bot."' },
+            { text: '    )' },
+            { text: '' },
+            { text: '#region number guess command' },
+            { text: '@bot.tree.command(name="number_guess", description="guess a number between 1 and 50")' },
+            { text: '@app_commands.describe(guess="Your guess (1-50)")' },
+            { text: 'async def number_guess(interaction: discord.Interaction, guess: int):' },
+            { text: '    number = random.randint(1, 50)' },
+            { text: '' },
+            { text: '    if guess == number:' },
+            { text: '        await interaction.response.send_message("🎉 Congratulations! You guessed correctly!")' },
+            { text: '    else:' },
+            { text: '        await interaction.response.send_message(f"❌ Wrong! The number was {number}")' },
+            { text: '' },
+            { text: '#endregion' },
+            { text: '' },
+            { text: '#region work command' },
+            { text: '@bot.tree.command(name="work", description="Earn coins")' },
+            { text: 'async def work(interaction: discord.Interaction):' },
+            { text: '    user_id = interaction.user.id' },
+            { text: '' },
+            { text: '    cursor.execute("SELECT coins FROM users WHERE user_id = ?", (user_id,))' },
+            { text: '    result = cursor.fetchone()' },
+            { text: '' },
+            { text: '    if result is None:' },
+            { text: '        coins = 0' },
+            { text: '        cursor.execute("INSERT INTO users (user_id, coins) VALUES (?, ?)", (user_id, coins))' },
+            { text: '    else:' },
+            { text: '        coins = result[0]' },
+            { text: '' },
+            { text: '    earnings = random.randint(10, 50)' },
+            { text: '' },
+            { text: '    guild_id = interaction.guild.id' },
+            { text: '' },
+            { text: '    cursor.execute("SELECT tax_rate, treasury FROM guild_economy WHERE guild_id = ?", (guild_id,))' },
+            { text: '    result_tax = cursor.fetchone()' },
+            { text: '' },
+            { text: '    if result_tax:' },
+            { text: '        tax_rate, treasury = result_tax' },
+            { text: '    else:' },
+            { text: '        tax_rate = 0' },
+            { text: '        treasury = 0' },
+            { text: '        cursor.execute("INSERT INTO guild_economy (guild_id, treasury, tax_rate) VALUES (?, 0, 0)", (guild_id,))' },
+            { text: '' },
+            { text: '    tax_amount = int(earnings * (tax_rate / 100))' },
+            { text: '    final_earnings = earnings - tax_amount' },
+            { text: '' },
+            { text: '    coins += final_earnings' },
+            { text: '' },
+            { text: '    # update treasury' },
+            { text: '    treasury += tax_amount' },
+            { text: '' },
+            { text: '    cursor.execute("UPDATE guild_economy SET treasury = ? WHERE guild_id = ?", (treasury, guild_id))' },
+            { text: '' },
+            { text: '    cursor.execute("UPDATE users SET coins = ? WHERE user_id = ?", (coins, user_id))' },
+            { text: '    conn.commit()' },
+            { text: '' },
+            { text: '    embed = discord.Embed(' },
+            { text: '        title="💼 Work",' },
+            { text: '        description=f"You earned **{earnings} coins**!",' },
+            { text: '        color=discord.Color.green()' },
+            { text: '    )' },
+            { text: '' },
+            { text: '    embed.add_field(name="Total Coins", value=str(coins))' },
+            { text: '' },
+            { text: '    await interaction.response.send_message(embed=embed)' },
+            { text: '#endregion' },
+            { text: '' },
+            { text: '' },
+            { text: '#region profile command' },
+            { text: '@bot.tree.command(name="profile", description="View your profile")' },
+            { text: 'async def profile(interaction: discord.Interaction):' },
+            { text: '    user = interaction.user' },
+            { text: '    user_id = user.id' },
+            { text: '' },
+            { text: '    cursor.execute("SELECT coins FROM users WHERE user_id = ?", (user_id,))' },
+            { text: '    result = cursor.fetchone()' },
+            { text: '' },
+            { text: '    coins = result[0] if result else 0' },
+            { text: '' },
+            { text: '    #njib rank ml database' },
+            { text: '    cursor.execute("SELECT COUNT(*) FROM users WHERE coins > ?", (coins,))', type: 'tip', note: 'Rank is off if user has 0 coins and no DB row (ties miscounted)' },
+            { text: '    rank = cursor.fetchone()[0] + 1' },
+            { text: '' },
+            { text: '    ' },
+            { text: '    cursor.execute("SELECT COUNT(*) FROM users")' },
+            { text: '    total_users = cursor.fetchone()[0]' },
+            { text: '' },
+            { text: '    ' },
+            { text: '    embed = discord.Embed(' },
+            { text: '        title=f"{user.name}\'s Profile",' },
+            { text: '        color=discord.Color.blue()' },
+            { text: '    )' },
+            { text: '' },
+            { text: '    embed.set_thumbnail(url=user.display_avatar.url)' },
+            { text: '' },
+            { text: '    embed.add_field(name="💰 Coins", value=str(coins), inline=True)' },
+            { text: '    embed.add_field(name="🏆 Rank", value=f"#{rank} / {total_users}", inline=True)' },
+            { text: '' },
+            { text: '    await interaction.response.send_message(embed=embed)' },
+            { text: '#endregion' },
+            { text: '' },
+            { text: '#region mockgov wiki command' },
+            { text: '@bot.tree.command(name="mockgov-wiki", description="gives you a link to the mock government wiki")' },
+            { text: 'async def mockgov_wiki(interaction: discord.Interaction):' },
+            { text: '    await interaction.response.send_message(' },
+            { text: '        "Here is the link to the Mock Government Wiki: https://mockgovernments.com/wiki/Main_Page"' },
+            { text: '    )' },
+            { text: '' },
+            { text: '#leaderboard command' },
+            { text: '@bot.tree.command(name="leaderboard", description="View top richest users")' },
+            { text: 'async def leaderboard(interaction: discord.Interaction):' },
+            { text: '    cursor.execute("SELECT user_id, coins FROM users ORDER BY coins DESC LIMIT 10")' },
+            { text: '    results = cursor.fetchall()' },
+            { text: '' },
+            { text: '    embed = discord.Embed(' },
+            { text: '        title="🏆 Leaderboard",' },
+            { text: '        description="Top 10 richest users",' },
+            { text: '        color=discord.Color.gold()' },
+            { text: '    )' },
+            { text: '' },
+            { text: '    if not results:' },
+            { text: '        embed.description = "No data yet."' },
+            { text: '        await interaction.response.send_message(embed=embed)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    leaderboard_text = ""' },
+            { text: '' },
+            { text: '    for i, (user_id, coins) in enumerate(results, start=1):' },
+            { text: '        user = bot.get_user(user_id) or await bot.fetch_user(user_id)', type: 'tip', note: 'Repeated fetch pattern — reuse the logs helper cache' },
+            { text: '' },
+            { text: '        leaderboard_text += f"**{i}. {user.name}** — {coins} coins\\n"' },
+            { text: '' },
+            { text: '    embed.description = leaderboard_text' },
+            { text: '' },
+            { text: '    await interaction.response.send_message(embed=embed)' },
+            { text: '' },
+            { text: '' },
+            { text: '#region punch command' },
+            { text: '@bot.tree.command(name="punch", description="punch someone")' },
+            { text: '@app_commands.describe(target="The user you want to target")' },
+            { text: 'async def action(interaction: discord.Interaction, target: discord.Member):' },
+            { text: '' },
+            { text: '    embed = discord.Embed(' },
+            { text: '        title=f"{target.name}",' },
+            { text: '        description=f"{interaction.user.mention} punched {target.mention}",' },
+            { text: '        color=discord.Color.purple()' },
+            { text: '    )' },
+            { text: '' },
+            { text: '    embed.set_image(url=random.choice(punches))' },
+            { text: '' },
+            { text: '    await interaction.response.send_message(embed=embed)' },
+            { text: '' },
+            { text: '#vote command' },
+            { text: '@bot.tree.command(name="vote", description="Start a vote")' },
+            { text: '@app_commands.describe(question="The question to vote on")' },
+            { text: 'async def vote(interaction: discord.Interaction, question: str):' },
+            { text: '' },
+            { text: '    view = VoteView(question, interaction.user.name)' },
+            { text: '    embed = view.get_embed()' },
+            { text: '' },
+            { text: '    await interaction.response.send_message(embed=embed, view=view)' },
+            { text: '    msg = await interaction.original_response()' },
+            { text: '    view.message = msg' },
+            { text: '' },
+            { text: '' },
+            { text: '# region ball spawn setup command' },
+            { text: '@bot.tree.command(name="mockgovball-setup", description="Set spawn channel")' },
+            { text: 'async def setup(interaction: discord.Interaction, channel: discord.TextChannel):' },
+            { text: '' },
+            { text: '    if not interaction.user.guild_permissions.administrator:' },
+            { text: '        await interaction.response.send_message("You need admin permissions", ephemeral=True)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    guild_id = interaction.guild.id' },
+            { text: '' },
+            { text: '    cursor.execute("""' },
+            { text: '    INSERT OR REPLACE INTO guild_settings (guild_id, channel_id)' },
+            { text: '    VALUES (?, ?)' },
+            { text: '    """, (guild_id, channel.id))' },
+            { text: '' },
+            { text: '    conn.commit()' },
+            { text: '' },
+            { text: '    await interaction.response.send_message(f"Spawn channel set to {channel.mention}")' },
+            { text: '' },
+            { text: '' },
+            { text: '' },
+            { text: '' },
+            { text: '# region message counter for ball spawn' },
+            { text: 'message_count = {}' },
+            { text: '' },
+            { text: '@bot.event' },
+            { text: 'async def on_message(message):', type: 'error', note: 'DUPLICATE on_message handler — also defined later for twitter. This one is silently overwritten and ball spawn never fires.' },
+            { text: '    if message.author.bot:' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    guild_id = message.guild.id', type: 'error', note: 'Crashes in DMs because message.guild is None.' },
+            { text: '' },
+            { text: '    message_count[guild_id] = message_count.get(guild_id, 0) + 1' },
+            { text: '' },
+            { text: '    if message_count[guild_id] >= 5:' },
+            { text: '        message_count[guild_id] = 0' },
+            { text: '        await spawn_ball(message.channel, guild_id)' },
+            { text: '' },
+            { text: '    await bot.process_commands(message)' },
+            { text: '' },
+            { text: '' },
+            { text: '#region ball spawn function' },
+            { text: 'async def spawn_ball(_channel, guild_id):' },
+            { text: '' },
+            { text: '    cursor.execute("SELECT channel_id FROM guild_settings WHERE guild_id = ?", (guild_id,))' },
+            { text: '    result = cursor.fetchone()' },
+            { text: '' },
+            { text: '    if not result:' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    channel_id = result[0]' },
+            { text: '    spawn_channel = bot.get_channel(channel_id)' },
+            { text: '' },
+            { text: '    if not spawn_channel:' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    name, image = random.choice(list(balls.items()))' },
+            { text: '' },
+            { text: '    view = GuessView(name)' },
+            { text: '' },
+            { text: '    embed = discord.Embed(' },
+            { text: '        title="🌍 A wild MockGovBall appeared!",' },
+            { text: '        description="Click the button and guess its name!",' },
+            { text: '        color=discord.Color.random()' },
+            { text: '    )' },
+            { text: '' },
+            { text: '    embed.set_image(url=image)' },
+            { text: '' },
+            { text: '    msg = await spawn_channel.send(embed=embed, view=view)' },
+            { text: '    view.message = msg' },
+            { text: '' },
+            { text: '' },
+            { text: '# region guess model for balls' },
+            { text: 'class GuessModal(discord.ui.Modal, title="Guess the Ball"):' },
+            { text: '    answer = discord.ui.TextInput(label="Your guess")' },
+            { text: '' },
+            { text: '    def __init__(self, correct_name, view):' },
+            { text: '        super().__init__()' },
+            { text: '        self.correct_name = correct_name.lower()' },
+            { text: '        self.view = view' },
+            { text: '' },
+            { text: '    async def on_submit(self, interaction: discord.Interaction):' },
+            { text: '        guess = self.answer.value.lower()' },
+            { text: '' },
+            { text: '        if guess == self.correct_name:' },
+            { text: '            user_id = interaction.user.id' },
+            { text: '' },
+            { text: '            cursor.execute("""' },
+            { text: '            INSERT OR IGNORE INTO collections (user_id, ball_name)' },
+            { text: '            VALUES (?, ?)' },
+            { text: '            """, (user_id, self.correct_name))' },
+            { text: '' },
+            { text: '            conn.commit()' },
+            { text: '' },
+            { text: '            await interaction.response.send_message(f"Correct! {interaction.user.mention} collected it")' },
+            { text: '' },
+            { text: '            for item in self.view.children:' },
+            { text: '                item.disabled = True' },
+            { text: '' },
+            { text: '            await self.view.message.edit(view=self.view)' },
+            { text: '' },
+            { text: '        else:' },
+            { text: '            await interaction.response.send_message("❌ Wrong guess!", ephemeral=True)' },
+            { text: '' },
+            { text: '' },
+            { text: 'class GuessView(discord.ui.View):' },
+            { text: '    def __init__(self, correct_name):' },
+            { text: '        super().__init__(timeout=120)' },
+            { text: '        self.correct_name = correct_name' },
+            { text: '        self.message = None' },
+            { text: '' },
+            { text: '    @discord.ui.button(label="Guess", style=discord.ButtonStyle.primary)' },
+            { text: '    async def guess_button(self, interaction: discord.Interaction, _button: discord.ui.Button):' },
+            { text: '        modal = GuessModal(self.correct_name, self)' },
+            { text: '        await interaction.response.send_modal(modal)' },
+            { text: '' },
+            { text: '    async def on_timeout(self):' },
+            { text: '        for item in self.children:' },
+            { text: '            item.disabled = True' },
+            { text: '' },
+            { text: '        if self.message:' },
+            { text: '            await self.message.edit(view=self)' },
+            { text: '' },
+            { text: '' },
+            { text: '@bot.tree.command(name="collection", description="View your collection")' },
+            { text: 'async def collection(interaction: discord.Interaction):' },
+            { text: '' },
+            { text: '    user_id = interaction.user.id' },
+            { text: '' },
+            { text: '    cursor.execute("SELECT ball_name FROM collections WHERE user_id = ?", (user_id,))' },
+            { text: '    results = cursor.fetchall()' },
+            { text: '' },
+            { text: '    if not results:' },
+            { text: '        await interaction.response.send_message("You have no balls yet!")' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    names = [r[0] for r in results]', type: 'tip', note: 'Displays lowercase names instead of the original casing the player saw' },
+            { text: '' },
+            { text: '    embed = discord.Embed(' },
+            { text: '        title=f"{interaction.user.name}\'s Collection",' },
+            { text: '        description="\\n".join(names),' },
+            { text: '        color=discord.Color.blue()' },
+            { text: '    )' },
+            { text: '' },
+            { text: '    await interaction.response.send_message(embed=embed)' },
+            { text: '' },
+            { text: '@bot.tree.command(name="set-tax", description="Set server tax rate (percentage)")' },
+            { text: '@app_commands.describe(rate="Tax rate (0-100)")' },
+            { text: 'async def set_tax(interaction: discord.Interaction, rate: float):' },
+            { text: '' },
+            { text: '    if not interaction.user.guild_permissions.administrator:' },
+            { text: '        await interaction.response.send_message("You need admin permissions!", ephemeral=True)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    if rate < 0 or rate > 25:' },
+            { text: '        await interaction.response.send_message("Tax must be between 0 and 25.", ephemeral=True)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    guild_id = interaction.guild.id' },
+            { text: '' },
+            { text: '    cursor.execute("""' },
+            { text: '    INSERT OR IGNORE INTO guild_economy (guild_id, treasury, tax_rate)' },
+            { text: '    VALUES (?, 0, 0)' },
+            { text: '    """, (guild_id,))' },
+            { text: '' },
+            { text: '    cursor.execute("""' },
+            { text: '    UPDATE guild_economy SET tax_rate = ? WHERE guild_id = ?' },
+            { text: '    """, (rate, guild_id))' },
+            { text: '' },
+            { text: '    conn.commit()' },
+            { text: '' },
+            { text: '    await interaction.response.send_message(f"Tax rate set to {rate}%")' },
+            { text: '' },
+            { text: '#region treasury command' },
+            { text: '@bot.tree.command(name="treasury", description="View server treasury")' },
+            { text: 'async def treasury(interaction: discord.Interaction):' },
+            { text: '' },
+            { text: '    guild_id = interaction.guild.id' },
+            { text: '' },
+            { text: '    cursor.execute("SELECT treasury, tax_rate FROM guild_economy WHERE guild_id = ?", (guild_id,))' },
+            { text: '    result = cursor.fetchone()' },
+            { text: '' },
+            { text: '    if not result:' },
+            { text: '        treasury = 0' },
+            { text: '        tax_rate = 0' },
+            { text: '    else:' },
+            { text: '        treasury, tax_rate = result' },
+            { text: '' },
+            { text: '    embed = discord.Embed(' },
+            { text: '        title="🏦 Server Treasury",' },
+            { text: '        color=discord.Color.gold()' },
+            { text: '    )' },
+            { text: '' },
+            { text: '    embed.add_field(name="💰 Treasury", value=str(treasury))' },
+            { text: '    embed.add_field(name="📊 Tax Rate", value=f"{tax_rate}%")' },
+            { text: '' },
+            { text: '    await interaction.response.send_message(embed=embed)' },
+            { text: '' },
+            { text: '' },
+            { text: '#region roulette command' },
+            { text: '@bot.tree.command(name="roulette", description="Play roulette")' },
+            { text: '@app_commands.describe(amount="Gamble an amount of coins")' },
+            { text: '@app_commands.describe(color="Bet on a color (red or black)")' },
+            { text: '@app_commands.choices(color=[' },
+            { text: '    app_commands.Choice(name="Red", value="red"),' },
+            { text: '    app_commands.Choice(name="Black", value="black")' },
+            { text: '])' },
+            { text: '@app_commands.describe(number="Bet on a number (0-36)")' },
+            { text: '@app_commands.checks.cooldown(1, 30, key=lambda i: (i.guild_id, i.user.id))', type: 'error', note: 'Wrong decorator: app_commands.checks.cooldown does not exist. Use discord.app_commands.checks.cooldown (and verify version support).' },
+            { text: 'async def roulette(interaction: discord.Interaction, amount: int, color: str, number: int):', type: 'tip', note: 'Both color and number are required — players cannot bet on only one outcome.' },
+            { text: '    correct_number = roulette_number()' },
+            { text: '    correct_color = roulette_color()' },
+            { text: '    if amount <= 0:' },
+            { text: '        await interaction.response.send_message("Amount must be greater than 0.", ephemeral=True)' },
+            { text: '        return' },
+            { text: '    user_id = interaction.user.id' },
+            { text: '    cursor.execute("SELECT coins FROM users WHERE user_id = ?", (user_id,))' },
+            { text: '    result = cursor.fetchone()' },
+            { text: '    coins = result[0] if result else 0' },
+            { text: '    if amount > coins:' },
+            { text: '        await interaction.response.send_message("You don\'t have enough coins!", ephemeral=True)' },
+            { text: '        return' },
+            { text: '    ' },
+            { text: '    #remove coins' },
+            { text: '    coins -= amount' },
+            { text: '    cursor.execute("UPDATE users SET coins = ? WHERE user_id = ?", (coins, user_id))' },
+            { text: '    conn.commit()' },
+            { text: '    ' },
+            { text: '    winnings = 0' },
+            { text: '    if color == correct_color:' },
+            { text: '        winnings += amount * 2' },
+            { text: '    if number == correct_number:' },
+            { text: '        winnings += amount * 4' },
+            { text: '    ' },
+            { text: '    #add winnings' },
+            { text: '    coins += winnings' },
+            { text: '    cursor.execute("UPDATE users SET coins = ? WHERE user_id = ?", (coins, user_id))' },
+            { text: '    conn.commit()' },
+            { text: '' },
+            { text: '    embed = discord.Embed(' },
+            { text: '        title="🎰 Roulette Result",' },
+            { text: '        description=f"The ball landed on **{correct_number}** ({correct_color})! You {\'won\' if winnings > 0 else \'lost\'} **{winnings} coins**.",' },
+            { text: '        color=discord.Color.random()' },
+            { text: '' },
+            { text: '    )' },
+            { text: '' },
+            { text: '    await interaction.response.send_message(embed=embed)' },
+            { text: '' },
+            { text: '# region server info command' },
+            { text: '@bot.tree.command(name="server_info", description="View server information")' },
+            { text: 'async def server_info(interaction: discord.Interaction):' },
+            { text: '    guild = interaction.guild' },
+            { text: '' },
+            { text: '    embed = discord.Embed(' },
+            { text: '        title=f"{guild.name} Information",' },
+            { text: '        color=discord.Color.blue()' },
+            { text: '    )' },
+            { text: '' },
+            { text: '    embed.set_thumbnail(url=guild.icon.url if guild.icon else None)' },
+            { text: '' },
+            { text: '    embed.add_field(name="Created On", value=guild.created_at.strftime("%Y-%m-%d"), inline=True)' },
+            { text: '    embed.add_field(name="Owner", value=guild.owner.mention, inline=True)' },
+            { text: '    embed.add_field(name="Members", value=str(guild.member_count), inline=True)' },
+            { text: '' },
+            { text: '    await interaction.response.send_message(embed=embed)' },
+            { text: '' },
+            { text: '#region daily server message count command' },
+            { text: '@bot.tree.command(name="message_count", description="View daily message count")' },
+            { text: 'async def message_count_command(interaction: discord.Interaction):' },
+            { text: '    guild_id = interaction.guild.id' },
+            { text: '    count = message_count.get(guild_id, 0)' },
+            { text: '' },
+            { text: '    embed = discord.Embed(' },
+            { text: '        title="📊 Daily Message Count",' },
+            { text: '        description=f"Messages sent today: **{count}**",' },
+            { text: '        color=discord.Color.orange()' },
+            { text: '    )' },
+            { text: '' },
+            { text: '    await interaction.response.send_message(embed=embed)' },
+            { text: '' },
+            { text: '' },
+            { text: '' },
+            { text: '#region about us command' },
+            { text: '@bot.tree.command(name="about_us", description="learn about the bot")' },
+            { text: 'async def about(interaction: discord.Interaction):' },
+            { text: '    await interaction.response.send_message(' },
+            { text: '        """This bot was created by Midou, a passionate developer and a mock government member.' },
+            { text: '          this bot aims to bring a unique and entertaining experience to every mock government server.' },
+            { text: '          our support server: https://discord.gg/3q5UBuwN9R"""' },
+            { text: '    )' },
+            { text: '' },
+            { text: '#region warn command (needs admin permissions, saves the warning in the database, if a user gets set amount of warnings they get kicked)' },
+            { text: '@bot.tree.command(name="warn", description="Warn a user")' },
+            { text: '@app_commands.describe(target="The user to warn")' },
+            { text: 'async def warn(interaction: discord.Interaction, target: discord.Member):' },
+            { text: '' },
+            { text: '    if not interaction.user.guild_permissions.administrator:' },
+            { text: '        await interaction.response.send_message("You need admin permissions!", ephemeral=True)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    cursor.execute("""' },
+            { text: '    INSERT INTO warnings (user_id, guild_id, reason)' },
+            { text: '    VALUES (?, ?, ?)' },
+            { text: '    """, (target.id, interaction.guild.id, "No reason provided"))' },
+            { text: '    conn.commit()' },
+            { text: '    #check if user has reached warning term_limit' },
+            { text: '    cursor.execute("SELECT COUNT(*) FROM warnings WHERE user_id = ? AND guild_id = ?", (target.id, interaction.guild.id))' },
+            { text: '    warning_count = cursor.fetchone()[0]' },
+            { text: '    cursor.execute("SELECT term_limit FROM warning_limits WHERE guild_id = ?", (interaction.guild.id,))', type: 'error', note: 'Reads warning_limits, but set_warning_term_limit writes to warning_term_limits — the configured limit is never applied.' },
+            { text: '    result = cursor.fetchone()' },
+            { text: '    warning_term_limit = result[0] if result else 3' },
+            { text: '    await interaction.response.send_message(f"Warning issued to {target.mention}.")' },
+            { text: '    if warning_count >= warning_term_limit:', type: 'error', note: 'Kick logic is duplicated three times in a row — will attempt to kick the user multiple times and reference undefined e.' },
+            { text: '        try:' },
+            { text: '            await interaction.guild.kick(target, reason="Reached warning term_limit")' },
+            { text: '            cursor.execute("DELETE FROM warnings WHERE user_id = ? AND guild_id = ?", (target.id, interaction.guild.id))' },
+            { text: '            conn.commit()' },
+            { text: '            await interaction.channel.send(f"{target.mention} has been kicked for reaching the warning term_limit.")' },
+            { text: '        except discord.Forbidden:' },
+            { text: '            await interaction.response.send_message(f"Failed to kick {target.mention}: insufficient permissions.", ephemeral=True)' },
+            { text: '    if warning_count >= warning_term_limit:', type: 'error', note: 'Duplicate kick block (2 of 3).' },
+            { text: '        try:' },
+            { text: '            await interaction.guild.kick(target, reason="Reached warning term_limit")' },
+            { text: '            kicked = True' },
+            { text: '        except discord.Forbidden:' },
+            { text: '            kicked = False' },
+            { text: '            await interaction.response.send_message(f"Failed to kick {target.mention}: insufficient permissions.", ephemeral=True)' },
+            { text: '        except discord.HTTPException as e:' },
+            { text: '            kicked = False' },
+            { text: '            await interaction.response.send_message(f"Failed to kick {target.mention}: {e}", ephemeral=True)' },
+            { text: '        if kicked:' },
+            { text: '            cursor.execute("DELETE FROM warnings WHERE user_id = ? AND guild_id = ?", (target.id, interaction.guild.id))' },
+            { text: '            conn.commit()' },
+            { text: '            await interaction.channel.send(f"{target.mention} has been kicked for reaching the warning term_limit.")' },
+            { text: '            await interaction.channel.send(f"An error occurred while trying to kick {target.mention}: {e}")', type: 'error', note: '`e` is only defined in the HTTPException branch — NameError when kicked succeeds.' },
+            { text: '        await interaction.guild.kick(target, reason="Reached warning term_limit")', type: 'error', note: 'Third duplicate kick — will attempt to kick again after already kicked.' },
+            { text: '        cursor.execute("DELETE FROM warnings WHERE user_id = ? AND guild_id = ?", (target.id, interaction.guild.id))' },
+            { text: '        conn.commit()' },
+            { text: '        await interaction.channel.send(f"{target.mention} has been kicked for reaching the warning term_limit.")' },
+            { text: '' },
+            { text: '' },
+            { text: '#region set warnings term_limit command' },
+            { text: '@bot.tree.command(name="set_warning_term_limit", description="Set the warning term_limit for kicking")' },
+            { text: '@app_commands.describe(term_limit="Number of warnings before kick")' },
+            { text: 'async def set_warning_term_limit(interaction: discord.Interaction, term_limit: int):' },
+            { text: '' },
+            { text: '    if not interaction.user.guild_permissions.administrator:' },
+            { text: '        await interaction.response.send_message("You need admin permissions!", ephemeral=True)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    cursor.execute("""' },
+            { text: '    CREATE TABLE IF NOT EXISTS warning_term_limits (', type: 'error', note: 'Creates warning_term_limits — but warn reads from warning_limits. Table name mismatch means the setting is never used.' },
+            { text: '        guild_id INTEGER PRIMARY KEY,' },
+            { text: '        term_limit INTEGER' },
+            { text: '    )' },
+            { text: '    """)' },
+            { text: '    conn.commit()' },
+            { text: '' },
+            { text: '    cursor.execute("""' },
+            { text: '    INSERT OR REPLACE INTO warning_term_limits (guild_id, term_limit)' },
+            { text: '    VALUES (?, ?)' },
+            { text: '    """, (interaction.guild.id, term_limit))' },
+            { text: '    conn.commit()' },
+            { text: '' },
+            { text: '    await interaction.response.send_message(' },
+            { text: '        f"Warning term_limit set to {term_limit}.\\n"' },
+            { text: '        f"Users will be automatically kicked from the server if they reach this number of warnings."' },
+            { text: '    )' },
+            { text: '' },
+            { text: '# region kick command (needs admin permissions, kicks a user and saves the reason in the database)' },
+            { text: '' },
+            { text: '@bot.tree.command(name="kick", description="Kick a user")' },
+            { text: '@app_commands.describe(target="The user to kick")' },
+            { text: '@app_commands.describe(reason="Reason for the kick")' },
+            { text: 'async def kick(interaction: discord.Interaction, target: discord.Member, reason: str = "No reason provided"):' },
+            { text: '    if not interaction.user.guild_permissions.administrator:' },
+            { text: '        await interaction.response.send_message("You need admin permissions!", ephemeral=True)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    cursor.execute("""' },
+            { text: '    CREATE TABLE IF NOT EXISTS kicks (' },
+            { text: '        id INTEGER PRIMARY KEY AUTOINCREMENT,' },
+            { text: '        user_id INTEGER,' },
+            { text: '        guild_id INTEGER,' },
+            { text: '        reason TEXT' },
+            { text: '    )' },
+            { text: '    """)' },
+            { text: '    conn.commit()' },
+            { text: '' },
+            { text: '    await interaction.response.send_message(f"{target.mention} has been kicked. Reason: {reason}")', type: 'error', note: 'Confirms the kick before actually kicking. If target.kick() fails, the message is a lie and the user is not kicked.' },
+            { text: '    cursor.execute("""' },
+            { text: '    INSERT INTO kicks (user_id, guild_id, reason)' },
+            { text: '    VALUES (?, ?, ?)' },
+            { text: '    """, (target.id, interaction.guild.id, reason))' },
+            { text: '    conn.commit()' },
+            { text: '    await target.kick(reason=reason)' },
+            { text: '@bot.tree.command(name="ban", description="Ban a user")' },
+            { text: '@app_commands.describe(target="The user to ban")' },
+            { text: '@app_commands.describe(reason="Reason for the ban")' },
+            { text: 'async def ban(interaction: discord.Interaction, target: discord.Member, reason: str = "No reason provided"):' },
+            { text: '    if not interaction.user.guild_permissions.administrator:' },
+            { text: '        await interaction.response.send_message("You need admin permissions!", ephemeral=True)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    cursor.execute("""' },
+            { text: '    CREATE TABLE IF NOT EXISTS bans (' },
+            { text: '        id INTEGER PRIMARY KEY AUTOINCREMENT,' },
+            { text: '        user_id INTEGER,' },
+            { text: '        guild_id INTEGER,' },
+            { text: '        reason TEXT' },
+            { text: '    )' },
+            { text: '    """)' },
+            { text: '    conn.commit()' },
+            { text: '' },
+            { text: '    await interaction.response.send_message(f"{target.mention} has been banned. Reason: {reason}")', type: 'error', note: 'Same premature confirmation as kick — message sent before the ban succeeds.' },
+            { text: '    cursor.execute("""' },
+            { text: '    INSERT INTO bans (user_id, guild_id, reason)' },
+            { text: '    VALUES (?, ?, ?)' },
+            { text: '    """, (target.id, interaction.guild.id, reason))' },
+            { text: '    conn.commit()' },
+            { text: '    await target.ban(reason=reason)' },
+            { text: '@bot.tree.command(name="mute", description="Mute a user")' },
+            { text: '@app_commands.describe(target="The user to mute")' },
+            { text: '@app_commands.describe(duration="Duration of the mute in minutes")' },
+            { text: 'async def mute(interaction: discord.Interaction, target: discord.Member, duration: int):', type: 'tip', note: '`duration` is accepted but never used — no unmute is scheduled, so the user is muted forever.' },
+            { text: '    if not interaction.user.guild_permissions.administrator:' },
+            { text: '        await interaction.response.send_message("You need admin permissions!", ephemeral=True)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    mute_role = discord.utils.get(interaction.guild.roles, name="Muted")' },
+            { text: '    if not mute_role:' },
+            { text: '        mute_role = await interaction.guild.create_role(name="Muted")' },
+            { text: '' },
+            { text: '        for channel in interaction.guild.channels:' },
+            { text: '            await channel.set_permissions(mute_role, send_messages=False, speak=False)' },
+            { text: '' },
+            { text: '    await target.add_roles(mute_role, reason="Muted by admin")' },
+            { text: '    await interaction.response.send_message(f"{target.mention} has been muted for {duration} minutes.")' },
+            { text: '' },
+            { text: '#region set mute role command (allows admins to set a specific role as the mute role)' },
+            { text: '@bot.tree.command(name="set_mute_role", description="Set the mute role")' },
+            { text: '@app_commands.describe(role="The role to use for muting")' },
+            { text: 'async def set_mute_role(interaction: discord.Interaction, role: discord.Role):' },
+            { text: '    if not interaction.user.guild_permissions.administrator:' },
+            { text: '        await interaction.response.send_message("You need admin permissions!", ephemeral=True)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    cursor.execute("""' },
+            { text: '    CREATE TABLE IF NOT EXISTS mute_roles (' },
+            { text: '        guild_id INTEGER PRIMARY KEY,' },
+            { text: '        role_id INTEGER' },
+            { text: '    )' },
+            { text: '    """)' },
+            { text: '    conn.commit()' },
+            { text: '' },
+            { text: '    cursor.execute("""' },
+            { text: '    INSERT OR REPLACE INTO mute_roles (guild_id, role_id)' },
+            { text: '    VALUES (?, ?)' },
+            { text: '    """, (interaction.guild.id, role.id))' },
+            { text: '    conn.commit()' },
+            { text: '' },
+            { text: '    await interaction.response.send_message(f"Mute role set to {role.mention}.")' },
+            { text: '' },
+            { text: '' },
+            { text: '' },
+            { text: '#region logs command (logs moderation actions like warns and kicks in a channel, needs admin permissions)' },
+            { text: '@bot.tree.command(name="logs", description="View moderation logs")' },
+            { text: 'async def logs(interaction: discord.Interaction):' },
+            { text: '    if not interaction.user.guild_permissions.administrator:' },
+            { text: '        await interaction.response.send_message("You need admin permissions!", ephemeral=True)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    cursor.execute("""' },
+            { text: '    SELECT user_id, reason FROM kicks WHERE guild_id = ?' },
+            { text: '    """, (interaction.guild.id,))' },
+            { text: '    kicks = cursor.fetchall()' },
+            { text: '' },
+            { text: '    cursor.execute("""' },
+            { text: '    SELECT user_id, reason FROM bans WHERE guild_id = ?' },
+            { text: '    """, (interaction.guild.id,))' },
+            { text: '    bans = cursor.fetchall()' },
+            { text: '    cursor.execute("""' },
+            { text: '    SELECT user_id, reason FROM warnings WHERE guild_id = ?' },
+            { text: '    """, (interaction.guild.id,))' },
+            { text: '    warnings = cursor.fetchall()' },
+            { text: '    embed = discord.Embed(' },
+            { text: '        title="Moderation Logs",' },
+            { text: '        color=discord.Color.red()' },
+            { text: '    )' },
+            { text: '    if not kicks and not bans and not warnings:' },
+            { text: '        embed.description = "No moderation actions logged yet."' },
+            { text: '        await interaction.response.send_message(embed=embed)' },
+            { text: '        return' },
+            { text: '    log_text = ""' },
+            { text: '    user_cache = {}' },
+            { text: '' },
+            { text: '    async def get_user_cached(user_id):' },
+            { text: '        if user_id in user_cache:' },
+            { text: '            return user_cache[user_id]' },
+            { text: '        user = bot.get_user(user_id)' },
+            { text: '        if user is None:' },
+            { text: '            try:' },
+            { text: '                user = await bot.fetch_user(user_id)' },
+            { text: '            except Exception:' },
+            { text: '                user = None' },
+            { text: '        user_cache[user_id] = user' },
+            { text: '        return user' },
+            { text: '' },
+            { text: '    for user_id, reason in kicks:' },
+            { text: '        user = await get_user_cached(user_id)' },
+            { text: '        user_name = user.name if user else f"User({user_id})"' },
+            { text: '        log_text += f"**Kick:** {user_name} - Reason: {reason}\\n"' },
+            { text: '    for user_id, reason in bans:' },
+            { text: '        user = await get_user_cached(user_id)' },
+            { text: '        user_name = user.name if user else f"User({user_id})"' },
+            { text: '        log_text += f"**Ban:** {user_name} - Reason: {reason}\\n"' },
+            { text: '    for user_id, reason in warnings:' },
+            { text: '        user = await get_user_cached(user_id)' },
+            { text: '        user_name = user.name if user else f"User({user_id})"' },
+            { text: '        log_text += f"**Warning:** {user_name} - Reason: {reason}\\n"' },
+            { text: '    embed.description = log_text' },
+            { text: '    await interaction.response.send_message(embed=embed)' },
+            { text: '    user_name = user.name if user else f"User({user_id})"', type: 'error', note: 'Dead code after send_message — references loop variables that are out of scope.' },
+            { text: '    log_text += f"**Warning:** {user_name} - Reason: {reason}\\n"', type: 'error', note: 'Dead / duplicate — never executed meaningfully.' },
+            { text: '    embed.description = log_text', type: 'error', note: 'Dead code.' },
+            { text: '    await interaction.response.send_message(embed=embed)', type: 'error', note: 'Second send_message will raise InteractionAlreadyResponded.' },
+            { text: '' },
+            { text: '#set up twitter channel command' },
+            { text: '@bot.tree.command(name="set_twitter_channel", description="Set the channel for twitter command")' },
+            { text: '@app_commands.describe(channel="The channel to use for twitter command")' },
+            { text: 'async def set_twitter_channel(interaction: discord.Interaction, channel: discord.TextChannel):' },
+            { text: '    if not interaction.user.guild_permissions.administrator:' },
+            { text: '        await interaction.response.send_message("You need admin permissions!", ephemeral=True)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    cursor.execute("""' },
+            { text: '    CREATE TABLE IF NOT EXISTS twitter_channels (' },
+            { text: '        guild_id INTEGER PRIMARY KEY,' },
+            { text: '        channel_id INTEGER' },
+            { text: '    )' },
+            { text: '    """)' },
+            { text: '    conn.commit()' },
+            { text: '' },
+            { text: '    cursor.execute("""' },
+            { text: '    INSERT OR REPLACE INTO twitter_channels (guild_id, channel_id)' },
+            { text: '    VALUES (?, ?)' },
+            { text: '    """, (interaction.guild.id, channel.id))' },
+            { text: '    conn.commit()' },
+            { text: '' },
+            { text: '    await interaction.response.send_message(f"Twitter channel set to {channel.mention}")' },
+            { text: '' },
+            { text: '#twitter command (turns every message into a tweet Title: user Description: message with a gray background content Footer: timestamp + server name Thumbnail: avatar Color: dark theme (X-like) cooldown 10 seconds and ignores messages that are not in the specified channel and adds a like button that adds a like count to the embed)' },
+            { text: '@bot.event', type: 'error', note: 'SECOND on_message handler — silently overwrites the ball-spawn on_message defined earlier.' },
+            { text: 'async def on_message(message):', type: 'error', note: 'Duplicate definition — the ball spawn event never fires.' },
+            { text: '    if message.author.bot:' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    guild_id = message.guild.id', type: 'error', note: 'DM crash — message.guild is None in direct messages.' },
+            { text: '' },
+            { text: '    cursor.execute("SELECT channel_id FROM twitter_channels WHERE guild_id = ?", (guild_id,))' },
+            { text: '    result = cursor.fetchone()' },
+            { text: '' },
+            { text: '    if not result:' },
+            { text: '        await bot.process_commands(message)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    channel_id = result[0]' },
+            { text: '' },
+            { text: '    if message.channel.id != channel_id:' },
+            { text: '        await bot.process_commands(message)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    embed = discord.Embed(' },
+            { text: '        title=f"{message.author.name} tweeted:",' },
+            { text: '        description= message.content or "No content",' },
+            { text: '        color=discord.Color.blue(),' },
+            { text: '        timestamp=message.created_at' },
+            { text: '    )' },
+            { text: '' },
+            { text: '    embed.set_footer(text=message.guild.name)' },
+            { text: '    embed.set_thumbnail(url=message.author.display_avatar.url)' },
+            { text: '' },
+            { text: '    like_button = LikeButton()' },
+            { text: '    view = discord.ui.View()' },
+            { text: '    view.add_item(like_button)' },
+            { text: '' },
+            { text: '    await message.channel.send(embed=embed, view=view)' },
+            { text: '    await message.delete()' },
+            { text: '' },
+            { text: '#coin flip' },
+            { text: '@bot.tree.command(name="coin_flip", description="flip a coin")' },
+            { text: 'async def coin_flip(interaction: discord.Interaction):' },
+            { text: '    result = random.choice(["Heads", "Tails"])' },
+            { text: '    await interaction.response.send_message(f"The coin landed on **{result}**!")' },
+            { text: '' },
+            { text: '' },
+            { text: '#blackjack command' },
+            { text: '@bot.tree.command(name="blackjack", description="Play a game of blackjack")' },
+            { text: 'async def blackjack(interaction: discord.Interaction):' },
+            { text: '    await interaction.response.send_message("Blackjack is not implemented yet. im still testing it")' },
+            { text: '' },
+            { text: '#coin flip pvp (two users bet on a coin flip)' },
+            { text: '@bot.tree.command(name="coin_flip_pvp", description="Challenge another user to a coin flip")' },
+            { text: '@app_commands.checks.cooldown(1, 60, key=lambda i: (i.guild_id, i.user.id))', type: 'error', note: 'Same wrong decorator as roulette — app_commands.checks.cooldown does not exist.' },
+            { text: '@app_commands.describe(target="The user to challenge")' },
+            { text: '@app_commands.describe(amount="The amount of coins to bet")' },
+            { text: 'async def coin_flip_pvp(interaction: discord.Interaction, target: discord.Member, amount: int):' },
+            { text: '    if target.bot:' },
+            { text: '        await interaction.response.send_message("You cannot challenge a bot!", ephemeral=True)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    user_id = interaction.user.id' },
+            { text: '    target_id = target.id' },
+            { text: '' },
+            { text: '    cursor.execute("SELECT coins FROM users WHERE user_id = ?", (user_id,))' },
+            { text: '    result = cursor.fetchone()' },
+            { text: '    coins = result[0] if result else 0' },
+            { text: '' },
+            { text: '    if amount <= 0:' },
+            { text: '        await interaction.response.send_message("Amount must be greater than 0.", ephemeral=True)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    if amount > coins:' },
+            { text: '        await interaction.response.send_message("You don\'t have enough coins!", ephemeral=True)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    cursor.execute("SELECT coins FROM users WHERE user_id = ?", (target_id,))' },
+            { text: '    result = cursor.fetchone()' },
+            { text: '    target_coins = result[0] if result else 0' },
+            { text: '' },
+            { text: '    if amount > target_coins:' },
+            { text: '        await interaction.response.send_message(f"{target.mention} doesn\'t have enough coins!", ephemeral=True)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    await interaction.response.send_message(f"{interaction.user.mention} has challenged {target.mention} to a coin flip for {amount} coins! Waiting for {target.mention} to accept...")' },
+            { text: '' },
+            { text: '' },
+            { text: '#confess command (allows users to confess something anonymously, the confession is sent to a specific channel that can be set up by admins)' },
+            { text: '@bot.tree.command(name="confess", description="Confess something anonymously")' },
+            { text: '@app_commands.describe(message="Your confession")' },
+            { text: 'async def confess(interaction: discord.Interaction, message: str):' },
+            { text: '    guild_id = interaction.guild.id' },
+            { text: '' },
+            { text: '    cursor.execute("SELECT channel_id FROM confession_channels WHERE guild_id = ?", (guild_id,))' },
+            { text: '    result = cursor.fetchone()' },
+            { text: '' },
+            { text: '    if not result:' },
+            { text: '        await interaction.response.send_message("Confession channel is not set up yet.", ephemeral=True)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    channel_id = result[0]' },
+            { text: '    confession_channel = bot.get_channel(channel_id)' },
+            { text: '' },
+            { text: '    if not confession_channel:' },
+            { text: '        await interaction.response.send_message("Confession channel not found. Please ask an admin to set it up again.", ephemeral=True)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    embed = discord.Embed(' },
+            { text: '        title="New Confession",' },
+            { text: '        description=message,' },
+            { text: '        color=discord.Color.dark_gray(),' },
+            { text: '        timestamp=interaction.created_at' },
+            { text: '    )' },
+            { text: '' },
+            { text: '    embed.set_footer(text=f"Confession from {interaction.guild.name}")' },
+            { text: '' },
+            { text: '    await confession_channel.send(embed=embed)' },
+            { text: '    await interaction.response.send_message("Your confession has been sent!", ephemeral=True)' },
+            { text: '' },
+            { text: '#confession channel setup command' },
+            { text: '@bot.tree.command(name="confession_channel_setup", description="Set up the confession channel")' },
+            { text: 'async def confession_channel_setup(interaction: discord.Interaction, channel: discord.TextChannel):' },
+            { text: '    if not interaction.user.guild_permissions.administrator:' },
+            { text: '        await interaction.response.send_message("You need admin permissions!", ephemeral=True)' },
+            { text: '        return' },
+            { text: '' },
+            { text: '    cursor.execute("""' },
+            { text: '    CREATE TABLE IF NOT EXISTS confession_channels (' },
+            { text: '        guild_id INTEGER PRIMARY KEY,' },
+            { text: '        channel_id INTEGER' },
+            { text: '    )' },
+            { text: '    """)' },
+            { text: '    conn.commit()' },
+            { text: '' },
+            { text: '    cursor.execute("""' },
+            { text: '    INSERT OR REPLACE INTO confession_channels (guild_id, channel_id)' },
+            { text: '    VALUES (?, ?)' },
+            { text: '    """, (interaction.guild.id, channel.id))' },
+            { text: '    conn.commit()' },
+            { text: '' },
+            { text: '    await interaction.response.send_message(f"Confession channel set to {channel.mention}.")' },
+            { text: '' },
+            { text: '' },
+            { text: '' },
+            { text: '#region ping' },
+            { text: '@bot.tree.command(name="ping", description="Check bot latency")' },
+            { text: 'async def ping(interaction: discord.Interaction):' },
+            { text: '    latency = bot.latency * 1000' },
+            { text: '    await interaction.response.send_message(f"Pong! Latency: {latency:.2f} ms")' },
+            { text: '' },
+            { text: '' },
+            { text: '' },
+            { text: 'bot.run(token)', type: 'tip', note: 'Crashes if token is None — add an explicit check or fail with a clear message.' }
+        ];
+
+        /* ────────────────────────────────────────────────
+           BUILD FINDINGS
+        ──────────────────────────────────────────────── */
+        const errors = [];
+        const tips = [];
+
+        codeLines.forEach((line, i) => {
+            if (line.type === 'error') errors.push({ lineNum: i + 1, note: line.note });
+            if (line.type === 'tip') tips.push({ lineNum: i + 1, note: line.note });
+        });
+
+        // Stats
+        document.getElementById('statTotal').textContent = codeLines.length;
+        document.getElementById('statErrors').textContent = errors.length;
+        document.getElementById('statTips').textContent = tips.length;
+        document.getElementById('errCount').textContent = errors.length;
+        document.getElementById('tipCount').textContent = tips.length;
+        document.getElementById('footerSummary').textContent =
+            `${errors.length} errors · ${tips.length} tips`;
+
+        /* ────────────────────────────────────────────────
+           RENDER FINDINGS LISTS
+        ──────────────────────────────────────────────── */
+        function renderFindings(listId, items, type) {
+            const ul = document.getElementById(listId);
+            ul.innerHTML = items.map(item => `
+                <li class="finding ${type}" data-line="${item.lineNum}" onclick="scrollToLine(${item.lineNum})">
+                    <span class="ln">L${item.lineNum}</span>
+                    <span class="desc">${escapeHtml(item.note)}</span>
+                </li>
+            `).join('');
+        }
+
+        renderFindings('errorList', errors, 'error');
+        renderFindings('tipList', tips, 'tip');
+
+        /* ────────────────────────────────────────────────
+           RENDER CODE
+        ──────────────────────────────────────────────── */
+        function escapeHtml(t) {
+            const d = document.createElement('div');
+            d.textContent = t;
+            return d.innerHTML;
+        }
+
+        function renderCode() {
+            const pre = document.getElementById('codeContainer');
+            pre.innerHTML = codeLines.map((line, i) => {
+                const num = (i + 1).toString().padStart(4, ' ');
+                const cls = line.type === 'error' ? 'error' : line.type === 'tip' ? 'tip' : '';
+                const tag = line.type === 'error'
+                    ? '<span class="tag err">BUG</span>'
+                    : line.type === 'tip'
+                        ? '<span class="tag tip">TIP</span>'
+                        : '';
+                const note = line.note
+                    ? `<span class="inline-note">// ${escapeHtml(line.note)}</span>`
+                    : '';
+                return `<div class="line ${cls}" id="line-${i + 1}"><span class="line-num">${num}</span><span class="line-code">${escapeHtml(line.text)}${tag}${note}</span></div>`;
+            }).join('');
+        }
+
+        renderCode();
+
+        /* ────────────────────────────────────────────────
+           SCROLL + HIGHLIGHT
+        ──────────────────────────────────────────────── */
+        function scrollToLine(lineNum) {
+            const el = document.getElementById('line-' + lineNum);
+            if (!el) return;
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('highlight');
+            setTimeout(() => el.classList.remove('highlight'), 1500);
+        }
+    </script>
+</body>
+</html>
